@@ -2,97 +2,77 @@
 ;loading libraries
 (require 2htdp/image)
 (require 2htdp/universe)
-;;(require racket/include)
 
 ;loading assets
 (require "assets.rkt")
-;(require "cards.rkt")
-;(provide (all-from-out "assets.rkt"))
 
 ;loading config
 (require "config.rkt")
 
-;Manipulating assets
+;preparing variables for the obstacles fliping images verticaly
+(define rainbow-down-img rainbow-img)
+(define rainbow-top-img    (flip-vertical rainbow-img))
+(define rainbow-flip-down-img rainbow-flip-img)
+(define rainbow-flip-top-img   (flip-vertical rainbow-flip-img))
 
-;preparing variables for the pipes
-(define green-down-pipe-img pipe-green-img)
-(define green-top-pipe-img    (flip-vertical green-down-pipe-img))
-(define red-down-pipe-img pipe-red-img)
-(define red-top-pipe-img   (flip-vertical red-down-pipe-img))
+; Defining rainbows 
+(define-struct rainbow (x y color) #:transparent)
 
-
-;;test
-;(define helper-wid 
-
-
-(define width  (image-width  background-img))
-(define height (image-height background-img))
-(define bird-height (image-height (first horse-img)))
-(define bird-width  (image-width  (first horse-img)))
-(define bird-x (/ width 4))
-(define pipe-width (image-width green-top-pipe-img))
-
-
-;;; PIPES
-
-(define-struct pipe (x y color) #:transparent)
-
-;;; STATES
-
+; Defining states for universe library
 (define-struct get-ready ()                                           #:transparent)
-(define-struct gaming   (time points pipes y velocity acceleration)  #:transparent)
-(define-struct game-over (death-image)                                #:transparent)
+(define-struct gaming   (time points rainbows y velocity acceleration)  #:transparent)
+(define-struct gameover (death-image)                                #:transparent)
 
 ; get-ready
 ;   The game is waiting for the player to get ready.
 ; gaming
 ;   The game has started.
 ;     time     = number of ticks since game start
-;     points   = number of pipes passed
-;     pipes    = a list of pipes on screen
+;     points   = number of rainbows passed
+;     rainbows    = a list of rainbows on screen
 ;     y        = y coordinate of bird
 ;     velocity = number of pixels to move bird per tick (positive is down, negative is up)
 ;     acceleartion = number of pixels per tick per tick to change velocity
-; game-over
+; gameover
 ;   The game is over. The number of points is displayed.
 ;     death-image = the last image of the game, i.e. screen shot of where the payer died
 
 
 
-(define (random-pipe)
+(define (random-rainbow)
   (define y (list-ref (list 0 50 100 150) (random 4)))
   (define color (list-ref (list "green" "red") (random 2)))
-  (make-pipe (* 2 width) y color))
+  (make-rainbow (* 2 width) y color))
 
 (define initial-gaming-state 
   (make-gaming 0 0 
-                (list (make-pipe width 100 "green") (random-pipe))
+                (list (make-rainbow width 100 "green") (random-rainbow))
                 (/ height 2) 0 gravity))
 
 ;;; gaming STATE MANIPULATORS
 
 (define (increase-time p)
-  (make-gaming (+ (gaming-time p) 1) (gaming-points p) (gaming-pipes p)
+  (make-gaming (+ (gaming-time p) 1) (gaming-points p) (gaming-rainbows p)
                 (gaming-y p) (gaming-velocity p) (gaming-acceleration p)))
 
 (define (increase-points p)
-  (make-gaming (gaming-time p) (+ (gaming-points p) 1) (gaming-pipes p)
+  (make-gaming (gaming-time p) (+ (gaming-points p) 1) (gaming-rainbows p)
                 (gaming-y p) (gaming-velocity p) (gaming-acceleration p)))
 
-(define (set-gaming-pipes p ps)
+(define (set-gaming-rainbows p ps)
   (make-gaming (gaming-time p) (gaming-points p) ps
                 (gaming-y p) (gaming-velocity p) (gaming-acceleration p)))
 
 (define (set-y p y)
-  (make-gaming (gaming-time p) (gaming-points p) (gaming-pipes p)
+  (make-gaming (gaming-time p) (gaming-points p) (gaming-rainbows p)
                 y (gaming-velocity p) (gaming-acceleration p)))
 
 (define (set-velocity p v)
-  (make-gaming (gaming-time p) (gaming-points p) (gaming-pipes p)
+  (make-gaming (gaming-time p) (gaming-points p) (gaming-rainbows p)
                 (gaming-y p) v (gaming-acceleration p)))
 
 (define (set-acceleration p a)
-  (make-gaming (gaming-time p) (gaming-points p) (gaming-pipes p)
+  (make-gaming (gaming-time p) (gaming-points p) (gaming-rainbows p)
                 (gaming-y p) (gaming-velocity p) a))
   
 
@@ -107,7 +87,7 @@
   (cond
     [(get-ready? s) (draw-get-ready s)]
     [(gaming?   s) (draw-gaming   s)]
-    [(game-over? s) (draw-game-over s)]
+    [(gameover? s) (draw-gameover s)]
     [else           (error 'draw "unknown state")]))
 
 ; draw-get-ready : get-ready -> image
@@ -124,12 +104,12 @@
   (overlay-bird p 
     (overlay-points p
       (place-foreground p 
-        (place-all-pipes p                       
+        (place-all-rainbows p                       
                          background-img)))))
 
-; draw-game-over : game-over -> image
-(define (draw-game-over g)
-  (place-text game-over-img (game-over-death-image g)))
+; draw-gameover : gameover -> image
+(define (draw-gameover g)
+  (place-text gameover-img (gameover-death-image g)))
 
 ; overlay-bird : gaming image -> image
 ;   draw a bird on top of the image
@@ -139,7 +119,6 @@
   (define bird-size (image-width (first horse-img)))
   (place-image/align (list-ref horse-img (quotient (remainder t 6) 2))
                      bird-x y
-                     ; (+ y (* bird-size (sin (* (/ t 40) 2 pi))))
                      "left" "top"
                      image))
 
@@ -168,34 +147,34 @@
     [else     (beside (points->image (quotient n 10))
                       (digit->image  (remainder n 10)))]))  
 
-(define (place-all-pipes p i)
-  (place-pipes (gaming-pipes p) i))
+(define (place-all-rainbows p i)
+  (place-rainbows (gaming-rainbows p) i))
 
-(define (place-pipes ps i)
+(define (place-rainbows ps i)
   (cond [(empty? ps) i]
-        [else        (place-pipes (rest ps)
-                                  (place-pipe (first ps) i))]))
+        [else        (place-rainbows (rest ps)
+                                  (place-rainbow (first ps) i))]))
 
-(define (place-pipe p i)
-  (place-bottom-pipe p (place-top-pipe p i)))
+(define (place-rainbow p i)
+  (place-bottom-rainbow p (place-top-rainbow p i)))
 
-(define (color->top-pipe c)
+(define (color->top-rainbow c)
   (cond
-    [(string=? c "green") green-top-pipe-img]
-    [(string=? c "red")   red-top-pipe-img]))
+    [(string=? c "green") rainbow-top-img]
+    [(string=? c "red")   rainbow-flip-top-img]))
 
-(define (color->bottom-pipe c)
+(define (color->bottom-rainbow c)
   (cond
-    [(string=? c "green") green-down-pipe-img]
-    [(string=? c "red")   red-down-pipe-img]))
+    [(string=? c "green") rainbow-down-img]
+    [(string=? c "red")   rainbow-flip-down-img]))
 
-(define (place-top-pipe p i)
-  (define pipe (color->top-pipe (pipe-color p)))
-  (place-image/align pipe (pipe-x p) (pipe-y p) "left" "bottom" i))
+(define (place-top-rainbow p i)
+  (define rainbow (color->top-rainbow (rainbow-color p)))
+  (place-image/align rainbow (rainbow-x p) (rainbow-y p) "left" "bottom" i))
 
-(define (place-bottom-pipe p i)
-  (define pipe (color->bottom-pipe (pipe-color p)))
-  (place-image/align pipe (pipe-x p) (+ (pipe-y p) pipe-gap-size) "left" "top" i))
+(define (place-bottom-rainbow p i)
+  (define rainbow (color->bottom-rainbow (rainbow-color p)))
+  (place-image/align rainbow (rainbow-x p) (+ (rainbow-y p) rainbow-gap-size) "left" "top" i))
 
 
 ;;; EVENT HANDLERS
@@ -206,7 +185,7 @@
   (cond
     [(get-ready? state) (handle-key/get-ready state key)]
     [(gaming?   state) (handle-key/gaming   state key)]
-    [(game-over? state) (handle-key/game-over state key)]))
+    [(gameover? state) (handle-key/gameover state key)]))
 
 ; handle-key/get-ready : get-ready key -> state
 (define (handle-key/get-ready g key)
@@ -219,8 +198,8 @@
   (define after-flap (update-physics (set-velocity (set-acceleration p 0) -100)))
   (set-acceleration after-flap gravity))
 
-; handle-key/game-over : game-over key -> state
-(define (handle-key/game-over g key)
+; handle-key/gameover : gameover key -> state
+(define (handle-key/gameover g key)
   (make-get-ready))
 
 ;;; TICK EVENTS
@@ -235,7 +214,7 @@
 (define (handle-tick-event/gaming p)
   (handle-collisions 
    (update-points
-    (update-pipes
+    (update-rainbows
      (update-physics (increase-time p))))))
 
 ; update-physics : gaming -> gaming
@@ -247,42 +226,42 @@
   (define new-y (+ y new-v))
   (set-y (set-velocity p new-v) new-y))
 
-; update-pipe : pipe -> pipe
-(define (update-pipe p)
-  (define x (pipe-x p))
-  (define y (pipe-y p))
+; update-rainbow : rainbow -> rainbow
+(define (update-rainbow p)
+  (define x (rainbow-x p))
+  (define y (rainbow-y p))
   (cond 
-    [(< x (- (image-width green-down-pipe-img)))
-     (random-pipe)]
+    [(< x (- (image-width rainbow-down-img)))
+     (random-rainbow)]
     [else
-     (make-pipe (- x 1) y (pipe-color p))]))
+     (make-rainbow (- x 1) y (rainbow-color p))]))
 
-; update-pipes : gaming -> gaming
-(define (update-pipes p)
-  (set-gaming-pipes p (sort-pipes (map update-pipe (gaming-pipes p)))))
+; update-rainbows : gaming -> gaming
+(define (update-rainbows p)
+  (set-gaming-rainbows p (sort-rainbows (map update-rainbow (gaming-rainbows p)))))
 
-(define (sort-pipes ps)
+(define (sort-rainbows ps)
   (cond 
-    [(< (pipe-x (first ps)) (pipe-x (second ps))) ps]
+    [(< (rainbow-x (first ps)) (rainbow-x (second ps))) ps]
     [else (reverse ps)]))
 
 ; handle-collisions : gaming -> gaming
 (define (handle-collisions p)
   (cond
-    [(or (bird-touches-ground? p) (bird-touches-pipe? p)) 
-     (make-game-over (draw-unscaled p))]
+    [(or (bird-touches-ground? p) (bird-touches-rainbow? p)) 
+     (make-gameover (draw-unscaled p))]
     [else p]))
 
 ; bird-touches-ground? : gaming -> boolean
 (define (bird-touches-ground? p)
   (> (gaming-y p) (- height (image-height floor-img) bird-height)))
 
-(define (bird-touches-pipe? p)
-  (define pipe (first (gaming-pipes p)))
-  (define xmin (pipe-x pipe))
-  (define xmax (+ xmin pipe-width))
-  (define ymin (pipe-y pipe))
-  (define ymax (+ ymin pipe-gap-size))
+(define (bird-touches-rainbow? p)
+  (define rainbow (first (gaming-rainbows p)))
+  (define xmin (rainbow-x rainbow))
+  (define xmax (+ xmin rainbow-width))
+  (define ymin (rainbow-y rainbow))
+  (define ymax (+ ymin rainbow-gap-size))
   (define y    (gaming-y p))
   (and (> (+ bird-x bird-width) xmin)
        (< bird-x xmax)
@@ -290,13 +269,12 @@
   
 (define (update-points p)
   (cond
-    [(= bird-x (+ (pipe-x (first (gaming-pipes p))) pipe-width))
+    [(= bird-x (+ (rainbow-x (first (gaming-rainbows p))) rainbow-width))
      (increase-points p)]
     [else p]))
         
 
-;; Starting the game function
-
+;; Starting the game function for menu button
 (define (start-flappy-horse) 
   (cond
     [(big-bang (make-get-ready)
@@ -307,12 +285,5 @@
     [else #f]
     ))
 
-#|
-(big-bang (make-get-ready)
-          [on-draw draw]
-          [on-key  handle-key-event]
-          [on-tick handle-tick-event])
-|#
-
-;;
+;; providing whole code to main menu
 (provide (all-defined-out))

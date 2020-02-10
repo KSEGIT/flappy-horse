@@ -20,9 +20,9 @@
                      (bitmap "assets/9.png")
                      ))
 
-;rainbows
-(define rainbow-img (bitmap "assets/rainbow.png"))
-(define rainbow-flip-img (bitmap "assets/rainbow-flip.png"))
+;pipes
+(define pipe-green-img (bitmap "assets/pipe-green.png"))
+(define pipe-red-img (bitmap "assets/pipe-red.png"))
  
 ;floor
 (define floor-img (bitmap "assets/floor.png"))
@@ -31,7 +31,7 @@
 (define get-ready-img (bitmap "assets/getready.png"))
 
 ;game over
-(define gameover-img (bitmap "assets/gameover.png"))
+(define game-over-img (bitmap "assets/gameover.png"))
 
 ;background
 (define background-img (bitmap "assets/background.png"))
