@@ -1,7 +1,7 @@
 #lang racket/gui
+
+
 (require "game.rkt")
-
-
 ;making frame 
 (define myframe ( new frame%
                       [label "main menu"]
@@ -23,7 +23,7 @@
 ;(define the-bitmap%
 ;  (make-object bitmap% "assets/hi_s.png"))
 
-;Main menu image
+;image
 (define the-bitmap%
   (make-object bitmap% "assets/kutas.png"))
 

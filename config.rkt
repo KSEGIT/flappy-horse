@@ -1,5 +1,11 @@
 #lang racket
-(require 2htdp/image)
-(require 2htdp/universe)
+
+(define gravity 0.5)
+(define pipe-gap-size 50)
 
 
+
+
+
+
+(provide (all-defined-out))

@@ -2,7 +2,7 @@
 ;loading libraries
 (require 2htdp/image)
 (require 2htdp/universe)
-;;(require racket/include)
+(require racket/include)
 
 ;loading assets
 (require "assets.rkt")
@@ -33,6 +33,17 @@
 (define pipe-width (image-width green-top-pipe-img))
 
 
+#|
+
+(define width  (/ (image-width  background-img) 2))
+(define height (/ (image-height background-img) 2))
+(define bird-height (image-height (first horse-img)))
+(define bird-width  (image-width  (first horse-img)))
+(define bird-x (/ width 4))
+(define pipe-width (image-width green-top-pipe-img))
+
+|#
+
 ;;; PIPES
 
 (define-struct pipe (x y color) #:transparent)
@@ -57,7 +68,8 @@
 ;   The game is over. The number of points is displayed.
 ;     death-image = the last image of the game, i.e. screen shot of where the payer died
 
-
+(define gravity 0.5)
+(define pipe-gap-size 50)
 
 (define (random-pipe)
   (define y (list-ref (list 0 50 100 150) (random 4)))
